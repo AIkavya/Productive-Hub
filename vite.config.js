@@ -4,6 +4,6 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   // 👇 Add this line to match your new repository name
-  base: '/MODERN-GOAL-TRACKER/',
+  base: '/Productive-Hub/',
   plugins: [react()],
 })
