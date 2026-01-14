@@ -2,7 +2,7 @@
   "name": "vite-project",
   "private": true,
   "version": "0.0.0",
-   "homepage": "https://aikavya.github.io/MODERN-GOAL-TRACKER",
+   "homepage": "https://aikavya.github.io/Productive-Hub",
   "type": "module",
   "scripts": {
     "dev": "vite",
