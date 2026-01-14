@@ -35,18 +35,36 @@ const Spinner = () => (
     <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary)' }}></div>
 );
 
+// --- Loading Screen Component ---
+const LoadingScreen = () => (
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col items-center justify-center z-50">
+        <div className="text-center space-y-6">
+            <div className="relative">
+                <div className="w-20 h-20 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mx-auto"></div>
+                <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-r-indigo-500 rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            </div>
+            <div className="space-y-2">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                    Cosmic Hub
+                </h1>
+                <p className="text-slate-400 text-sm">Initializing your productivity universe...</p>
+            </div>
+        </div>
+    </div>
+);
+
 // --- Motivational Quotes Component ---
 const MotivationalQuote = () => {
-    const quotes = [
-        "The best way to predict the future is to create it.",
-        "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-        "Believe you can and you're halfway there.",
-        "The secret of getting ahead is getting started.",
-        "It's hard to beat a person who never gives up."
-    ];
     const [quote, setQuote] = useState('');
 
     useEffect(() => {
+        const quotes = [
+            "The best way to predict the future is to create it.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "Believe you can and you're halfway there.",
+            "The secret of getting ahead is getting started.",
+            "It's hard to beat a person who never gives up."
+        ];
         setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     }, []);
 
@@ -96,13 +114,18 @@ export default function App() {
     // --- UI State ---
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [currentView, setCurrentView] = useState('missions');
-    const [animations, setAnimations] = useState([]);
     const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const mountRef = useRef(null);
 
     // --- Data Management ---
     useEffect(() => {
+        // Simulate initial load time for better UX
+        const timer = setTimeout(() => {
+            setIsInitialLoad(false);
+        }, 2000);
+
         try {
             console.log("Attempting to load data...");
             const keysToTry = ['cosmic-hub-data-v3', 'cosmic-hub-data-v2', 'cosmic-hub-data'];
@@ -142,12 +165,14 @@ export default function App() {
             setTheme(localStorage.getItem('cosmic-theme') || 'gotham');
         }
         setIsDataLoading(false);
+
+        return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {
         // Apply theme globally
         document.documentElement.dataset.theme = theme;
-        try { localStorage.setItem('cosmic-theme', theme); } catch {}
+        try { localStorage.setItem('cosmic-theme', theme); } catch (e) { /* ignore */ }
     }, [theme]);
 
     useEffect(() => {
@@ -273,6 +298,7 @@ export default function App() {
         };
     }, [isDataLoading]);
 
+    if (isInitialLoad) return <LoadingScreen />;
     if (isDataLoading) return <div className="min-h-screen flex justify-center items-center" style={{ background: 'var(--bg2)' }}><Spinner /></div>;
     
     const activeGoals = goals.filter(g => {
@@ -306,52 +332,63 @@ export default function App() {
 
     return (
         <>
-            <div ref={mountRef} className="fixed top-0 left-0 w-full h-full -z-10" />
+            <div ref={mountRef} className="fixed top-0 left-0 w-full h-full -z-20" />
+            <div className="orbital-grid" />
 
-            <div className="min-h-screen font-sans">
+            <div className="min-h-screen font-sans app-shell">
                 {/* Desktop shell */}
                 <div className="hidden md:flex min-h-screen">
-                    <aside className="w-72 p-4 t-surface backdrop-blur-md">
-                        <div className="mb-6">
+                    <aside className="w-72 p-6 t-surface card-glow flex-shrink-0">
+                        <div className="mb-8">
                             <div className="text-xl font-extrabold t-gradient-text">Cosmic Hub</div>
                             <div className="text-sm t-muted-2 mt-1">Plan • Focus • Win</div>
                         </div>
 
                         <AppNavigation currentView={currentView} setCurrentView={setCurrentView} variant="sidebar" />
 
-                        <div className="mt-6">
+                        <div className="mt-8">
                             <ThemeSwitcher theme={theme} setTheme={setTheme} />
                         </div>
                     </aside>
 
-                    <main className="flex-1 p-4 lg:p-6">
-                        <div className="max-w-6xl mx-auto">
+                    <main className="flex-1 p-6 lg:p-8 overflow-hidden">
+                        <div className="max-w-7xl mx-auto h-full">
                             {showCompletionAnimation && <CompletionAnimationOverlay onClose={() => setShowCompletionAnimation(false)} />}
 
-                            <div className="flex items-center justify-between gap-4 mb-4">
+                            <div className="flex items-center justify-between gap-4 mb-6">
                                 <div>
-                                    <h1 className="text-2xl font-bold">{viewTitle}</h1>
-                                    <p className="t-muted-2 text-sm">Stay consistent. Small steps compound.</p>
+                                    <p className="metric-chip metric-chip--good mb-2 inline-flex items-center gap-1">
+                                        <span>LIVE BOARD</span>
+                                    </p>
+                                    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+                                        {viewTitle}
+                                    </h1>
+                                    <p className="t-muted-2 text-sm md:text-base">
+                                        Stay consistent. Tiny orbits. Massive trajectory.
+                                    </p>
                                 </div>
                             </div>
 
-                            <section className="t-surface rounded-2xl p-4 sm:p-6">
+                            <div className="content-scroll pb-6">
+                                <section className="t-surface card-glow p-6 lg:p-8">
                                 {currentView === 'missions' && (
                                     <>
-                                        <MotivationalQuote />
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <div className="space-y-5">
+                                        <div className="mb-8">
+                                            <MotivationalQuote />
+                                        </div>
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                            <div className="space-y-6">
                                                 <div>
-                                                    <h2 className="text-xl font-bold t-muted mb-2">New Mission</h2>
-                                                    <form onSubmit={handleAddGoal} className="space-y-2">
-                                                        <div className="flex flex-col sm:flex-row gap-2">
-                                                            <input type="text" value={newGoal.text} onChange={(e) => setNewGoal({...newGoal, text: e.target.value})} placeholder="Launch a new goal..." className="flex-grow rounded-lg px-4 py-2 t-input t-ring"/>
-                                                            <input type="date" value={newGoal.deadline} onChange={(e) => setNewGoal({...newGoal, deadline: e.target.value})} className="rounded-lg px-4 py-2 t-input t-ring"/>
-                                                            <button type="submit" className="t-btn-primary rounded-lg px-4 py-2 font-semibold"><Icon path="M12 4.5v15m7.5-7.5h-15" /></button>
+                                                    <h2 className="text-2xl font-bold t-muted mb-4">New Mission</h2>
+                                                    <form onSubmit={handleAddGoal} className="space-y-4">
+                                                        <div className="flex flex-col lg:flex-row gap-3">
+                                                            <input type="text" value={newGoal.text} onChange={(e) => setNewGoal({...newGoal, text: e.target.value})} placeholder="Launch a new goal..." className="flex-grow rounded-lg px-4 py-3 t-input t-ring text-base"/>
+                                                            <input type="date" value={newGoal.deadline} onChange={(e) => setNewGoal({...newGoal, deadline: e.target.value})} className="rounded-lg px-4 py-3 t-input t-ring"/>
+                                                            <button type="submit" className="t-btn-primary rounded-lg px-6 py-3 font-semibold whitespace-nowrap"><Icon path="M12 4.5v15m7.5-7.5h-15" /></button>
                                                         </div>
-                                                        <div className="flex gap-2">
-                                                            <input type="text" value={newGoal.tag} onChange={(e) => setNewGoal({...newGoal, tag: e.target.value})} placeholder="Tag (optional)" className="flex-1 rounded-lg px-4 py-2 text-sm t-input t-ring"/>
-                                                            <select value={newGoal.priority} onChange={(e) => setNewGoal({...newGoal, priority: e.target.value})} className="rounded-lg px-4 py-2 text-sm t-input t-ring">
+                                                        <div className="flex gap-3">
+                                                            <input type="text" value={newGoal.tag} onChange={(e) => setNewGoal({...newGoal, tag: e.target.value})} placeholder="Tag (optional)" className="flex-1 rounded-lg px-4 py-3 text-sm t-input t-ring"/>
+                                                            <select value={newGoal.priority} onChange={(e) => setNewGoal({...newGoal, priority: e.target.value})} className="rounded-lg px-4 py-3 text-sm t-input t-ring">
                                                                 <option value="low">Low Priority</option>
                                                                 <option value="medium">Medium Priority</option>
                                                                 <option value="high">High Priority</option>
@@ -362,16 +399,100 @@ export default function App() {
                                                 </div>
 
                                                 <div>
-                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                                                        <h2 className="text-xl font-bold t-muted">Active Missions</h2>
-                                                        <input type="text" value={missionSearch} onChange={(e) => setMissionSearch(e.target.value)} placeholder="Search missions..." className="w-full sm:w-72 rounded-lg px-4 py-2 text-sm t-input t-ring"/>
+                                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                                                        <h2 className="text-2xl font-bold t-muted">Active Missions</h2>
+                                                        <input type="text" value={missionSearch} onChange={(e) => setMissionSearch(e.target.value)} placeholder="Search missions..." className="w-full lg:w-80 rounded-lg px-4 py-3 text-sm t-input t-ring"/>
                                                     </div>
-                                                    <div className="space-y-4">
-                                                        {filteredActiveGoals.length === 0 ? <p className="text-center t-muted-2 p-4 bg-gray-800/50 rounded-lg">No matching missions.</p> : filteredActiveGoals.map(goal => <GoalItem key={goal.id} goal={goal} updateGoal={updateGoal} deleteGoal={deleteGoal} handleMajorCompletion={handleMajorCompletion} />)}
+                                                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                                                        {filteredActiveGoals.length === 0 ? <p className="text-center t-muted-2 p-6 bg-gray-800/50 rounded-lg">No matching missions.</p> : filteredActiveGoals.map(goal => <GoalItem key={goal.id} goal={goal} updateGoal={updateGoal} deleteGoal={deleteGoal} handleMajorCompletion={handleMajorCompletion} />)}
                                                     </div>
                                                 </div>
                                             </div>
 
+                                            <div className="space-y-6">
+                                                <DailyPlanner
+                                                    schedule={schedule}
+                                                    handleAddScheduleItem={handleAddScheduleItem}
+                                                    newScheduleItem={newScheduleItem}
+                                                    setNewScheduleItem={setNewScheduleItem}
+                                                    toggleTimer={toggleTimer}
+                                                    deleteScheduleItem={deleteScheduleItem}
+                                                    clearCompletedSchedule={clearCompletedSchedule}
+                                                    plannerSearch={plannerSearch}
+                                                    setPlannerSearch={setPlannerSearch}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                                {currentView === 'habits' && <HabitTracker habits={habits} setHabits={setHabits} />}
+                                {currentView === 'pomodoro' && <PomodoroTimer onComplete={handleMajorCompletion} />}
+                                {currentView === 'notes' && <QuickNotes notes={quickNotes} setNotes={setQuickNotes} />}
+                                {currentView === 'calendar' && <CalendarView goals={goals} events={events} setEvents={setEvents} />}
+                                {currentView === 'logbook' && <Logbook goals={goals} updateGoal={updateGoal} deleteGoal={deleteGoal} />}
+                                {currentView === 'dashboard' && <ProductivityDashboard goals={goals} habits={habits} schedule={schedule} />}
+                                {currentView === 'analytics' && <Analytics completedGoals={completedGoals} />}
+                            </section>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+
+                {/* Mobile shell */}
+                <div className="md:hidden min-h-screen pb-24 app-shell">
+                    <div className="px-4 py-4">
+                        <div className="t-surface card-glow p-4 rounded-2xl">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-lg font-extrabold t-gradient-text truncate">Cosmic Hub</div>
+                                    <div className="text-xs t-muted-2 truncate">{viewTitle}</div>
+                                </div>
+                                <ThemeSwitcher theme={theme} setTheme={setTheme} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="px-4 pb-4">
+                        {showCompletionAnimation && <CompletionAnimationOverlay onClose={() => setShowCompletionAnimation(false)} />}
+                        <section className="t-surface rounded-2xl p-6 space-y-6 content-scroll">
+                            {currentView === 'missions' && (
+                                <>
+                                    <div className="mb-6">
+                                        <MotivationalQuote />
+                                    </div>
+                                    
+                                    <div className="space-y-8">
+                                        <div className="space-y-4">
+                                            <h2 className="text-xl font-bold t-muted">New Mission</h2>
+                                            <form onSubmit={handleAddGoal} className="space-y-4">
+                                                <input type="text" value={newGoal.text} onChange={(e) => setNewGoal({...newGoal, text: e.target.value})} placeholder="Launch a new goal..." className="w-full rounded-lg px-4 py-3 t-input t-ring text-base"/>
+                                                <div className="flex gap-3">
+                                                    <input type="date" value={newGoal.deadline} onChange={(e) => setNewGoal({...newGoal, deadline: e.target.value})} className="flex-1 rounded-lg px-4 py-3 t-input t-ring"/>
+                                                    <button type="submit" className="t-btn-primary rounded-lg px-6 py-3 font-semibold"><Icon path="M12 4.5v15m7.5-7.5h-15" /></button>
+                                                </div>
+                                                <div className="flex gap-3">
+                                                    <input type="text" value={newGoal.tag} onChange={(e) => setNewGoal({...newGoal, tag: e.target.value})} placeholder="Tag" className="flex-1 rounded-lg px-4 py-3 text-sm t-input t-ring"/>
+                                                    <select value={newGoal.priority} onChange={(e) => setNewGoal({...newGoal, priority: e.target.value})} className="rounded-lg px-4 py-3 text-sm t-input t-ring">
+                                                        <option value="low">Low</option>
+                                                        <option value="medium">Medium</option>
+                                                        <option value="high">High</option>
+                                                        <option value="urgent">Urgent</option>
+                                                    </select>
+                                                </div>
+                                            </form>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col gap-3">
+                                                <h2 className="text-xl font-bold t-muted">Active Missions</h2>
+                                                <input type="text" value={missionSearch} onChange={(e) => setMissionSearch(e.target.value)} placeholder="Search missions..." className="w-full rounded-lg px-4 py-3 text-sm t-input t-ring"/>
+                                            </div>
+                                            <div className="space-y-4">
+                                                {filteredActiveGoals.length === 0 ? <p className="text-center t-muted-2 p-6 bg-gray-800/50 rounded-lg">No matching missions.</p> : filteredActiveGoals.map(goal => <GoalItem key={goal.id} goal={goal} updateGoal={updateGoal} deleteGoal={deleteGoal} handleMajorCompletion={handleMajorCompletion} />)}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-700/50">
                                             <DailyPlanner
                                                 schedule={schedule}
                                                 handleAddScheduleItem={handleAddScheduleItem}
@@ -384,96 +505,21 @@ export default function App() {
                                                 setPlannerSearch={setPlannerSearch}
                                             />
                                         </div>
-                                    </>
-                                )}
-                                {currentView === 'habits' && <HabitTracker habits={habits} setHabits={setHabits} />}
-                                {currentView === 'pomodoro' && <PomodoroTimer onComplete={handleMajorCompletion} />}
-                                {currentView === 'notes' && <QuickNotes notes={quickNotes} setNotes={setQuickNotes} />}
-                                {currentView === 'calendar' && <CalendarView goals={goals} updateGoal={updateGoal} events={events} setEvents={setEvents} />}
-                                {currentView === 'logbook' && <Logbook goals={goals} updateGoal={updateGoal} deleteGoal={deleteGoal} />}
-                                {currentView === 'dashboard' && <ProductivityDashboard goals={goals} habits={habits} schedule={schedule} />}
-                                {currentView === 'analytics' && <Analytics completedGoals={completedGoals} />}
-                            </section>
-                        </div>
-                    </main>
-                </div>
-
-                {/* Mobile shell */}
-                <div className="md:hidden min-h-screen pb-20">
-                    <div className="px-3 py-3">
-                        <div className="t-surface rounded-2xl p-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                    <div className="text-lg font-extrabold t-gradient-text truncate">Cosmic Productivity Hub</div>
-                                    <div className="text-xs t-muted-2 truncate">{viewTitle}</div>
-                                </div>
-                                <ThemeSwitcher theme={theme} setTheme={setTheme} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="px-3">
-                        {showCompletionAnimation && <CompletionAnimationOverlay onClose={() => setShowCompletionAnimation(false)} />}
-                        <section className="t-surface rounded-2xl p-4">
-                            {currentView === 'missions' && (
-                                <>
-                                    <MotivationalQuote />
-                                    <div className="space-y-6">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <h2 className="text-xl font-bold t-muted mb-2">New Mission</h2>
-                                                <form onSubmit={handleAddGoal} className="space-y-2">
-                                                    <input type="text" value={newGoal.text} onChange={(e) => setNewGoal({...newGoal, text: e.target.value})} placeholder="Launch a new goal..." className="w-full rounded-lg px-4 py-2 t-input t-ring"/>
-                                                    <div className="flex gap-2">
-                                                        <input type="date" value={newGoal.deadline} onChange={(e) => setNewGoal({...newGoal, deadline: e.target.value})} className="flex-1 rounded-lg px-4 py-2 t-input t-ring"/>
-                                                        <button type="submit" className="t-btn-primary rounded-lg px-4 py-2 font-semibold"><Icon path="M12 4.5v15m7.5-7.5h-15" /></button>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <input type="text" value={newGoal.tag} onChange={(e) => setNewGoal({...newGoal, tag: e.target.value})} placeholder="Tag" className="flex-1 rounded-lg px-4 py-2 text-sm t-input t-ring"/>
-                                                        <select value={newGoal.priority} onChange={(e) => setNewGoal({...newGoal, priority: e.target.value})} className="rounded-lg px-4 py-2 text-sm t-input t-ring">
-                                                            <option value="low">Low</option>
-                                                            <option value="medium">Medium</option>
-                                                            <option value="high">High</option>
-                                                            <option value="urgent">Urgent</option>
-                                                        </select>
-                                                    </div>
-                                                </form>
-                                            </div>
-
-                                            <div>
-                                                <input type="text" value={missionSearch} onChange={(e) => setMissionSearch(e.target.value)} placeholder="Search missions..." className="w-full rounded-lg px-4 py-2 text-sm t-input t-ring mb-3"/>
-                                                <div className="space-y-4">
-                                                    {filteredActiveGoals.length === 0 ? <p className="text-center t-muted-2 p-4 bg-gray-800/50 rounded-lg">No matching missions.</p> : filteredActiveGoals.map(goal => <GoalItem key={goal.id} goal={goal} updateGoal={updateGoal} deleteGoal={deleteGoal} handleMajorCompletion={handleMajorCompletion} />)}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <DailyPlanner
-                                            schedule={schedule}
-                                            handleAddScheduleItem={handleAddScheduleItem}
-                                            newScheduleItem={newScheduleItem}
-                                            setNewScheduleItem={setNewScheduleItem}
-                                            toggleTimer={toggleTimer}
-                                            deleteScheduleItem={deleteScheduleItem}
-                                            clearCompletedSchedule={clearCompletedSchedule}
-                                            plannerSearch={plannerSearch}
-                                            setPlannerSearch={setPlannerSearch}
-                                        />
                                     </div>
                                 </>
                             )}
                             {currentView === 'habits' && <HabitTracker habits={habits} setHabits={setHabits} />}
                             {currentView === 'pomodoro' && <PomodoroTimer onComplete={handleMajorCompletion} />}
                             {currentView === 'notes' && <QuickNotes notes={quickNotes} setNotes={setQuickNotes} />}
-                            {currentView === 'calendar' && <CalendarView goals={goals} updateGoal={updateGoal} events={events} setEvents={setEvents} />}
+                            {currentView === 'calendar' && <CalendarView goals={goals} events={events} setEvents={setEvents} />}
                             {currentView === 'logbook' && <Logbook goals={goals} updateGoal={updateGoal} deleteGoal={deleteGoal} />}
                             {currentView === 'dashboard' && <ProductivityDashboard goals={goals} habits={habits} schedule={schedule} />}
                             {currentView === 'analytics' && <Analytics completedGoals={completedGoals} />}
                         </section>
                     </div>
 
-                    <nav className="fixed bottom-0 left-0 right-0 p-2" style={{ background: 'color-mix(in srgb, var(--bg2) 55%, transparent)' }}>
-                        <div className="mx-auto max-w-md t-surface rounded-2xl px-2 py-2">
+                    <nav className="fixed bottom-0 left-0 right-0 p-3" style={{ background: 'color-mix(in srgb, var(--bg2) 55%, transparent)' }}>
+                        <div className="mx-auto max-w-md t-surface nav-floating px-3 py-3">
                             <AppNavigation currentView={currentView} setCurrentView={setCurrentView} variant="bottom" />
                         </div>
                     </nav>
@@ -485,7 +531,7 @@ export default function App() {
 
 // --- Animation Components ---
 const CompletionAnimationOverlay = ({ onClose }) => (
-    <div className="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center animate-fade-in">
+    <div className="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center animate-fade-in completion-stars">
         {[...Array(20)].map((_, i) => (
             <div key={i} className="star" style={{
                 '--i': i,
@@ -523,17 +569,20 @@ const AppNavigation = ({ currentView, setCurrentView, variant }) => {
         // Keep bottom nav compact: 5 key views
         const mobileViews = APP_VIEWS.filter(v => ['missions','dashboard','pomodoro','notes','calendar'].includes(v.id));
         return (
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-5 gap-1" role="tablist">
                 {mobileViews.map(v => {
                     const active = v.id === currentView;
                     return (
                         <button
                             key={v.id}
                             onClick={() => setCurrentView(v.id)}
-                            className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 t-ring ${active ? 't-btn-primary' : 't-btn-ghost'}`}
+                            className={`flex flex-col items-center justify-center gap-1 rounded-xl py-3 px-2 t-ring transition-all duration-300 ${active ? 't-btn-primary' : 't-btn-ghost'}`}
+                            role="tab"
+                            aria-selected={active}
+                            aria-label={`Switch to ${v.name} view`}
                         >
-                            <Icon path={v.icon} className="w-5 h-5" />
-                            <span className="text-[10px] leading-none">{v.name}</span>
+                            <Icon path={v.icon} className="w-6 h-6 transition-transform duration-300 hover:scale-110" />
+                            <span className="text-[10px] leading-none font-medium">{v.name}</span>
                         </button>
                     );
                 })}
@@ -543,7 +592,7 @@ const AppNavigation = ({ currentView, setCurrentView, variant }) => {
 
     // Sidebar
     return (
-        <div className="space-y-1">
+        <nav className="space-y-1" role="navigation" aria-label="Main navigation">
             {APP_VIEWS.map(v => {
                 const active = v.id === currentView;
                 return (
@@ -551,13 +600,16 @@ const AppNavigation = ({ currentView, setCurrentView, variant }) => {
                         key={v.id}
                         onClick={() => setCurrentView(v.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left t-ring ${active ? 't-btn-primary' : 't-surface-2 t-btn-ghost'}`}
+                        role="tab"
+                        aria-selected={active}
+                        aria-label={`Switch to ${v.name} view`}
                     >
                         <Icon path={v.icon} className="w-5 h-5" />
                         <span className="text-sm font-medium">{v.name}</span>
                     </button>
                 );
             })}
-        </div>
+        </nav>
     );
 };
 
@@ -572,12 +624,12 @@ const ThemeSwitcher = ({ theme, setTheme }) => {
     ];
 
     return (
-        <div className="flex items-center justify-center sm:justify-end gap-2">
-            <span className="text-xs sm:text-sm t-muted-2">Theme</span>
+        <div className="flex items-center justify-center sm:justify-end gap-2 flex-shrink-0">
+            <span className="text-xs sm:text-sm t-muted-2 hidden sm:inline">Theme</span>
             <select
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
-                className="t-surface-2 rounded-lg px-3 py-2 text-sm t-ring"
+                className="t-surface-2 rounded-lg px-3 py-2 text-sm t-ring min-w-0"
                 style={{ color: 'var(--text)' }}
             >
                 {themes.map(t => (
@@ -604,13 +656,16 @@ const DailyPlanner = ({ schedule, handleAddScheduleItem, newScheduleItem, setNew
                     className="w-full sm:w-72 rounded-lg px-4 py-2 text-sm t-input t-ring"
                 />
             </div>
-            <form onSubmit={handleAddScheduleItem} className="flex gap-2">
+            <form
+                onSubmit={handleAddScheduleItem}
+                className="flex flex-col sm:flex-row gap-2"
+            >
                 <input 
                     type="number" 
                     value={newScheduleItem.duration} 
                     onChange={(e) => setNewScheduleItem({...newScheduleItem, duration: e.target.value ? parseInt(e.target.value) : ''})} 
                     placeholder="Duration (min)" 
-                    className="rounded-lg px-2 py-2 w-28 sm:w-32 t-input t-ring"
+                    className="rounded-lg px-2 py-2 w-full sm:w-32 t-input t-ring"
                 />
                 <input 
                     type="text" 
@@ -619,7 +674,12 @@ const DailyPlanner = ({ schedule, handleAddScheduleItem, newScheduleItem, setNew
                     placeholder="Schedule a task..." 
                     className="flex-grow rounded-lg px-4 py-2 t-input t-ring"
                 />
-                <button type="submit" className="t-btn-primary rounded-lg px-4 py-2 font-semibold"><Icon path="M12 4.5v15m7.5-7.5h-15" /></button>
+                <button
+                    type="submit"
+                    className="t-btn-primary rounded-lg px-4 py-2 font-semibold sm:self-auto self-stretch"
+                >
+                    <Icon path="M12 4.5v15m7.5-7.5h-15" />
+                </button>
             </form>
         </div>
         <div className="space-y-2 max-h-[60vh] sm:max-h-[500px] overflow-y-auto pr-2">
@@ -777,19 +837,19 @@ const GoalItem = ({ goal, updateGoal, deleteGoal, handleMajorCompletion }) => {
     };
 
     return (
-        <div id={`goal-${goal.id}`} className={`relative p-4 rounded-lg transition-all duration-300 ${isCompleted ? 'bg-green-500/20 border-green-500/40' : 'bg-gray-800/60'} t-border`}>
+        <div id={`goal-${goal.id}`} className={`relative p-4 rounded-lg transition-all duration-300 goal-card ${isCompleted ? 'bg-green-500/20 border-green-500/40 goal-card-completed' : 'bg-gray-800/60'} t-border`}>
             <div className="flex flex-wrap items-center gap-x-3">
                 <div className="flex-grow">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`font-bold text-lg ${isCompleted ? 'line-through text-gray-500' : 'text-purple-100'}`}>{goal.text}</span>
-                        {goal.tag && <span className="px-2 py-0.5 text-xs rounded-full t-pill">{goal.tag}</span>}
-                        {goal.priority === 'urgent' && <span className="px-2 py-0.5 bg-red-600/30 text-red-300 text-xs rounded-full">Urgent</span>}
-                        {goal.priority === 'high' && <span className="px-2 py-0.5 bg-orange-600/30 text-orange-300 text-xs rounded-full">High</span>}
+                        <span className={`font-bold text-lg transition-colors duration-300 ${isCompleted ? 'line-through text-gray-500' : 'text-purple-100 hover:text-purple-200'}`}>{goal.text}</span>
+                        {goal.tag && <span className="px-2 py-0.5 text-xs rounded-full t-pill hover:bg-purple-600/40 transition-all duration-200 priority-badge">{goal.tag}</span>}
+                        {goal.priority === 'urgent' && <span className="px-2 py-0.5 bg-red-600/30 text-red-300 text-xs rounded-full hover:bg-red-600/50 transition-all duration-200 priority-badge glow-primary">Urgent</span>}
+                        {goal.priority === 'high' && <span className="px-2 py-0.5 bg-orange-600/30 text-orange-300 text-xs rounded-full hover:bg-orange-600/50 transition-all duration-200 priority-badge">High</span>}
                     </div>
                 </div>
                 <div className="flex items-center gap-1 ml-auto">
-                    <button onClick={() => setIsEditing(!isEditing)} title="Edit Details" className="text-cyan-400 hover:text-cyan-300 p-1"><Icon path="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" className="w-5 h-5"/></button>
-                    <button onClick={() => deleteGoal(goal.id)} title="Delete Goal" className="text-red-400 hover:text-red-300 p-1"><Icon path="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a4.8108 4.8108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 4.811 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.067-2.09 1.02-2.09 2.201v.916m7.5 0a48.667 4.8.667 0 00-7.5 0" className="w-5 h-5"/></button>
+                    <button onClick={() => setIsEditing(!isEditing)} title="Edit Details" className="text-cyan-400 hover:text-cyan-300 p-1 goal-action-btn transition-all duration-200"><Icon path="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" className="w-5 h-5"/></button>
+                    <button onClick={() => deleteGoal(goal.id)} title="Delete Goal" className="text-red-400 hover:text-red-300 p-1 goal-action-btn transition-all duration-200"><Icon path="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a4.8108 4.8108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 4.811 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.067-2.09 1.02-2.09 2.201v.916m7.5 0a4.8667 4.8.667 0 00-7.5 0" className="w-5 h-5"/></button>
                 </div>
             </div>
              {goal.deadline && (
@@ -815,23 +875,23 @@ const GoalItem = ({ goal, updateGoal, deleteGoal, handleMajorCompletion }) => {
                 </div>
             )}
             {totalCount > 0 && (
-                <div className="mt-3">
-                    <div className="flex justify-between text-sm t-muted mb-1"><span>Progress</span><span>{percentage}%</span></div>
-                    <div className="w-full bg-gray-700 rounded-full h-2.5">
-                        <div className="h-2.5 rounded-full" style={{ width: `${percentage}%`, background: 'linear-gradient(90deg, var(--primary), var(--primary2))' }}></div>
+                <div className="mt-3 group">
+                    <div className="flex justify-between text-sm t-muted mb-1"><span>Progress</span><span className="font-medium">{percentage}%</span></div>
+                    <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                        <div className="h-2.5 rounded-full transition-all duration-500 ease-out group-hover:scale-105" style={{ width: `${percentage}%`, background: 'linear-gradient(90deg, var(--primary), var(--primary2))', boxShadow: '0 0 10px rgba(99, 102, 241, 0.3)' }}></div>
                     </div>
                 </div>
             )}
             <div className="mt-4 pl-4 space-y-2" style={{ borderLeft: '2px solid var(--border)' }}>
                 {goal.subgoals.map(sg => (
-                    <div key={sg.id}>
-                        <div className="flex items-center">
-                            <input type="checkbox" checked={sg.completed} onChange={() => onToggleSubgoal(sg.id)} className="w-4 h-4 bg-gray-700 border-gray-600 rounded" style={{ accentColor: 'var(--primary)' }}/>
-                            <span className={`ml-3 flex-grow cursor-pointer ${sg.completed ? 'line-through text-gray-500' : 'text-gray-300'}`} onClick={() => setExpandedSubgoal(expandedSubgoal === sg.id ? null : sg.id)}>{sg.text}</span>
-                            {sg.link && <a href={sg.link} target="_blank" rel="noopener noreferrer" className="ml-auto text-cyan-400 hover:text-cyan-300"><Icon path="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" className="w-4 h-4"/></a>}
+                    <div key={sg.id} className="group">
+                        <div className="flex items-center p-2 rounded-md hover:bg-gray-700/30 transition-colors duration-200">
+                            <input type="checkbox" checked={sg.completed} onChange={() => onToggleSubgoal(sg.id)} className="w-4 h-4 bg-gray-700 border-gray-600 rounded hover:border-purple-400 transition-colors duration-200" style={{ accentColor: 'var(--primary)' }}/>
+                            <span className={`ml-3 flex-grow cursor-pointer transition-all duration-200 ${sg.completed ? 'line-through text-gray-500' : 'text-gray-300 group-hover:text-gray-200'}`} onClick={() => setExpandedSubgoal(expandedSubgoal === sg.id ? null : sg.id)}>{sg.text}</span>
+                            {sg.link && <a href={sg.link} target="_blank" rel="noopener noreferrer" className="ml-auto text-cyan-400 hover:text-cyan-300 transition-colors duration-200 p-1 rounded hover:bg-cyan-400/10"><Icon path="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" className="w-4 h-4"/></a>}
                         </div>
                         {expandedSubgoal === sg.id && (
-                             <div className="ml-7 mt-2 p-2 bg-gray-900/50 rounded-md text-sm text-gray-400">
+                             <div className="ml-7 mt-2 p-3 bg-gray-900/50 rounded-md text-sm text-gray-400 border-l-2 border-purple-500/50 animate-fade-in">
                                 <p>{sg.notes || "No notes for this step."}</p>
                             </div>
                         )}
@@ -854,7 +914,7 @@ const GoalItem = ({ goal, updateGoal, deleteGoal, handleMajorCompletion }) => {
 
 
 // --- Calendar View (Updated) ---
-const CalendarView = ({ goals, updateGoal, events, setEvents }) => {
+const CalendarView = ({ goals, events, setEvents }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [eventInput, setEventInput] = useState('');
@@ -1043,21 +1103,7 @@ const Logbook = ({ goals, updateGoal, deleteGoal }) => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [accomplishment, setAccomplishment] = useState('');
     const [timeSpent, setTimeSpent] = useState('');
-
-    const allAccomplishments = goals.flatMap(g => g.accomplishments || [])
-                                .sort((a,b) => new Date(b.date) - new Date(a.date));
-
-    const groupedByDate = allAccomplishments.reduce((acc, item) => {
-        const dateKey = new Date(item.date).toDateString();
-        if (!acc[dateKey]) acc[dateKey] = [];
-        acc[dateKey].push(item);
-        return acc;
-    }, {});
     
-    const dateKeys = Object.keys(groupedByDate);
-    let streak = 0;
-    const streakQuotes = ["Consistency is key!", "One step at a time.", "Keep the momentum going!", "Another day, another win.", "You're on a roll!"];
-
     const handleQuickAdd = (goalId) => {
         const goal = goals.find(g => g.id === goalId);
         if (goal) {
