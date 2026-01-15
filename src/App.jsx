@@ -1,5 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getFirestore, collection, setDoc, getDoc, doc } from 'firebase/firestore';
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyA4s-U9Uw7lH6Zk_aB2C8dE3fG4hI5jK6l",
+    authDomain: "cosmic-hub-planner.firebaseapp.com",
+    projectId: "cosmic-hub-planner",
+    storageBucket: "cosmic-hub-planner.appspot.com",
+    messagingSenderId: "123456789012",
+    appId: "1:123456789012:web:abc123def456ghi789"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // --- Data ---
 const indianHolidays2025 = {
@@ -97,8 +115,172 @@ const playNotificationSound = () => {
 };
 
 
+// --- Authentication Modal Component ---
+const AuthModal = ({ isRegistering, setIsRegistering, onLogin, onRegister, onGoogleLogin, isLoading, error }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [localError, setLocalError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLocalError('');
+        
+        if (!email || !password) {
+            setLocalError('Please fill in all fields');
+            return;
+        }
+
+        if (isRegistering) {
+            if (password !== confirmPassword) {
+                setLocalError('Passwords do not match');
+                return;
+            }
+            if (password.length < 6) {
+                setLocalError('Password must be at least 6 characters');
+                return;
+            }
+            await onRegister(email, password);
+        } else {
+            await onLogin(email, password);
+        }
+    };
+
+    const displayError = error || localError;
+
+    return (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div className="w-full max-w-md mx-4">
+                <div className="t-surface card-glow p-8 rounded-2xl space-y-6">
+                    <div className="text-center">
+                        <h1 className="text-3xl font-bold t-gradient-text mb-2">Cosmic Hub</h1>
+                        <p className="t-muted text-sm">Plan • Focus • Win</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <button
+                            onClick={() => { setIsRegistering(false); setLocalError(''); }}
+                            className={`w-full py-2 px-4 rounded-lg font-semibold transition-all ${
+                                !isRegistering
+                                    ? 'bg-blue-600 text-white'
+                                    : 't-btn-ghost t-muted hover:bg-gray-700'
+                            }`}
+                        >
+                            Login
+                        </button>
+                        <button
+                            onClick={() => { setIsRegistering(true); setLocalError(''); }}
+                            className={`w-full py-2 px-4 rounded-lg font-semibold transition-all ${
+                                isRegistering
+                                    ? 'bg-blue-600 text-white'
+                                    : 't-btn-ghost t-muted hover:bg-gray-700'
+                            }`}
+                        >
+                            Register
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium t-muted mb-2">Email</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="your@email.com"
+                                className="w-full px-4 py-2 rounded-lg t-input t-ring text-sm"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium t-muted mb-2">Password</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className="w-full px-4 py-2 rounded-lg t-input t-ring text-sm"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        {isRegistering && (
+                            <div>
+                                <label className="block text-sm font-medium t-muted mb-2">Confirm Password</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="w-full px-4 py-2 rounded-lg t-input t-ring text-sm"
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        )}
+
+                        {displayError && (
+                            <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg text-sm">
+                                {displayError}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-semibold py-2 px-4 rounded-lg transition-all"
+                        >
+                            {isLoading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    {isRegistering ? 'Creating account...' : 'Logging in...'}
+                                </span>
+                            ) : (
+                                isRegistering ? 'Create Account' : 'Login'
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t t-border"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 t-surface t-muted">or</span>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={onGoogleLogin}
+                        disabled={isLoading}
+                        className="w-full bg-white hover:bg-gray-100 disabled:bg-gray-100 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-3"
+                    >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"></path>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path>
+                        </svg>
+                        {isLoading ? 'Signing in...' : 'Continue with Gmail'}
+                    </button>
+
+                    <p className="text-center text-xs t-muted">
+                        Your data is securely stored in the cloud
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- Main App Component ---
 export default function App() {
+    // --- Auth State ---
+    const [user, setUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
+
     // --- App State ---
     const [goals, setGoals] = useState([]);
     const [schedule, setSchedule] = useState([]);
@@ -116,75 +298,173 @@ export default function App() {
     const [currentView, setCurrentView] = useState('missions');
     const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [authError, setAuthError] = useState('');
+    const [isAuthProcessing, setIsAuthProcessing] = useState(false);
 
     const mountRef = useRef(null);
 
-    // --- Data Management ---
+    // --- Authentication Handlers ---
+    const handleLogin = async (email, password) => {
+        setIsAuthProcessing(true);
+        setAuthError('');
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            let errorMessage = 'Failed to login';
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email';
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = 'Incorrect password';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Invalid email address';
+            } else if (error.code === 'auth/user-disabled') {
+                errorMessage = 'This account has been disabled';
+            }
+            setAuthError(errorMessage);
+        } finally {
+            setIsAuthProcessing(false);
+        }
+    };
+
+    const handleRegister = async (email, password) => {
+        setIsAuthProcessing(true);
+        setAuthError('');
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            let errorMessage = 'Failed to create account';
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'Email already in use';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = 'Password is too weak';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Invalid email address';
+            }
+            setAuthError(errorMessage);
+        } finally {
+            setIsAuthProcessing(false);
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            setGoals([]);
+            setSchedule([]);
+            setEvents({});
+            setHabits([]);
+            setQuickNotes([]);
+            setCurrentView('missions');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        setIsAuthProcessing(true);
+        setAuthError('');
+        try {
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            let errorMessage = 'Failed to login with Google';
+            if (error.code === 'auth/popup-closed-by-user') {
+                errorMessage = 'Login cancelled';
+            } else if (error.code === 'auth/popup-blocked') {
+                errorMessage = 'Popup was blocked. Please allow popups.';
+            }
+            setAuthError(errorMessage);
+        } finally {
+            setIsAuthProcessing(false);
+        }
+    };
+
+    // --- Authentication Effect ---
     useEffect(() => {
-        // Simulate initial load time for better UX
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                // Load user data from Firestore
+                try {
+                    const userDocRef = doc(db, 'users', currentUser.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setGoals(userData.goals || []);
+                        setSchedule(userData.schedule || []);
+                        setEvents(userData.events || {});
+                        setHabits(userData.habits || []);
+                        setQuickNotes(userData.quickNotes || []);
+                        setTheme(userData.theme || 'gotham');
+                    }
+                } catch (error) {
+                    console.error("Failed to load user data:", error);
+                }
+            } else {
+                setUser(null);
+            }
+            setAuthLoading(false);
+        });
+        return unsubscribe;
+    }, []);
+
+    // --- Data Management (with Firestore persistence) ---
+    useEffect(() => {
         const timer = setTimeout(() => {
             setIsInitialLoad(false);
         }, 2000);
 
-        try {
-            console.log("Attempting to load data...");
-            const keysToTry = ['cosmic-hub-data-v3', 'cosmic-hub-data-v2', 'cosmic-hub-data'];
-            let savedData = null;
-            let sourceKey = null;
-
-            for (const key of keysToTry) {
-                const data = localStorage.getItem(key);
-                if (data) {
-                    savedData = data;
-                    sourceKey = key;
-                    console.log(`Data found from source: ${sourceKey}`);
-                    break; 
+        if (!user) {
+            try {
+                const keysToTry = ['cosmic-hub-data-v3', 'cosmic-hub-data-v2', 'cosmic-hub-data'];
+                let savedData = null;
+                for (const key of keysToTry) {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        savedData = data;
+                        break;
+                    }
                 }
-                console.log(`No data found for key: ${key}`);
+                if (savedData) {
+                    const parsedData = JSON.parse(savedData);
+                    const migratedGoals = (parsedData.goals || []).map(g => ({
+                        ...g,
+                        accomplishments: g.accomplishments || [],
+                    }));
+                    setGoals(migratedGoals);
+                    setSchedule(parsedData.schedule || []);
+                    setEvents(parsedData.events || {});
+                    setHabits(parsedData.habits || []);
+                    setQuickNotes(parsedData.quickNotes || []);
+                    setTheme(parsedData.theme || localStorage.getItem('cosmic-theme') || 'gotham');
+                } else {
+                    setTheme(localStorage.getItem('cosmic-theme') || 'gotham');
+                }
+            } catch (error) {
+                console.error("Failed to load data from local storage", error);
+                setTheme(localStorage.getItem('cosmic-theme') || 'gotham');
             }
-            
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                const migratedGoals = (parsedData.goals || []).map(g => ({
-                    ...g,
-                    accomplishments: g.accomplishments || [],
-                }));
-                setGoals(migratedGoals);
-                setSchedule(parsedData.schedule || []);
-                setEvents(parsedData.events || {});
-                setHabits(parsedData.habits || []);
-                setQuickNotes(parsedData.quickNotes || []);
-                setTheme(parsedData.theme || localStorage.getItem('cosmic-theme') || 'gotham');
-                console.log("Data loaded and migrated successfully.");
-            } else {
-                 console.log("No saved data found in any known local storage key.");
-                 setTheme(localStorage.getItem('cosmic-theme') || 'gotham');
-            }
-        } catch (error) {
-            console.error("Failed to load or migrate data from local storage", error);
-            setTheme(localStorage.getItem('cosmic-theme') || 'gotham');
         }
         setIsDataLoading(false);
-
         return () => clearTimeout(timer);
-    }, []);
+    }, [user]);
 
     useEffect(() => {
-        // Apply theme globally
         document.documentElement.dataset.theme = theme;
         try { localStorage.setItem('cosmic-theme', theme); } catch (e) { /* ignore */ }
     }, [theme]);
 
     useEffect(() => {
-        if (!isDataLoading) {
+        if (!isDataLoading && user) {
             try {
-                const dataToSave = JSON.stringify({ goals, schedule, events, habits, quickNotes, theme });
-                localStorage.setItem('cosmic-hub-data-v3', dataToSave);
+                const dataToSave = { goals, schedule, events, habits, quickNotes, theme };
+                const userDocRef = doc(db, 'users', user.uid);
+                setDoc(userDocRef, dataToSave, { merge: true });
             } catch (error) {
-                console.error("Failed to save data", error);
+                console.error("Failed to save data to Firestore", error);
             }
         }
-    }, [goals, schedule, events, habits, quickNotes, theme, isDataLoading]);
+    }, [goals, schedule, events, habits, quickNotes, theme, isDataLoading, user]);
 
     const handleMajorCompletion = () => {
         playNotificationSound();
@@ -317,6 +597,25 @@ export default function App() {
     if (isInitialLoad) return <LoadingScreen />;
     if (isDataLoading) return <div className="min-h-screen flex justify-center items-center" style={{ background: 'var(--bg2)' }}><Spinner /></div>;
     
+    // Show auth modal if user is not logged in
+    if (!user) {
+        return (
+            <>
+                <div ref={mountRef} className="fixed top-0 left-0 w-full h-full -z-20" />
+                <div className="orbital-grid" />
+                <AuthModal 
+                    isRegistering={isRegistering} 
+                    setIsRegistering={setIsRegistering}
+                    onLogin={handleLogin}
+                    onRegister={handleRegister}
+                    onGoogleLogin={handleGoogleLogin}
+                    isLoading={isAuthProcessing}
+                    error={authError}
+                />
+            </>
+        );
+    }
+    
     const activeGoals = goals.filter(g => {
         const total = g.subgoals.length;
         const completed = g.subgoals.filter(sg => sg.completed).length;
@@ -360,7 +659,7 @@ export default function App() {
                             <div className="text-sm t-muted-2 mt-1">Plan • Focus • Win</div>
                         </div>
 
-                        <AppNavigation currentView={currentView} setCurrentView={setCurrentView} variant="sidebar" />
+                        <AppNavigation currentView={currentView} setCurrentView={setCurrentView} variant="sidebar" onLogout={handleLogout} />
 
                         <div className="mt-8">
                             <ThemeSwitcher theme={theme} setTheme={setTheme} />
@@ -538,7 +837,7 @@ export default function App() {
 
                     <nav className="fixed bottom-0 left-0 right-0 p-3" style={{ background: 'color-mix(in srgb, var(--bg2) 55%, transparent)' }}>
                         <div className="mx-auto max-w-md t-surface nav-floating px-3 py-3">
-                            <AppNavigation currentView={currentView} setCurrentView={setCurrentView} variant="bottom" />
+                            <AppNavigation currentView={currentView} setCurrentView={setCurrentView} variant="bottom" onLogout={handleLogout} />
                         </div>
                     </nav>
                 </div>
@@ -582,7 +881,7 @@ const APP_VIEWS = [
     { id: 'analytics', name: 'Analytics', icon: "M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5" },
 ];
 
-const AppNavigation = ({ currentView, setCurrentView, variant }) => {
+const AppNavigation = ({ currentView, setCurrentView, variant, onLogout }) => {
     if (variant === 'bottom') {
         // Keep bottom nav compact: 5 key views
         const mobileViews = APP_VIEWS.filter(v => ['missions','dashboard','pomodoro','notes','calendar'].includes(v.id));
@@ -627,6 +926,16 @@ const AppNavigation = ({ currentView, setCurrentView, variant }) => {
                     </button>
                 );
             })}
+            {onLogout && (
+                <button
+                    onClick={onLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left t-ring mt-4 pt-4 border-t border-gray-700 t-surface-2 t-btn-ghost hover:text-red-400"
+                    aria-label="Logout"
+                >
+                    <Icon path="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" className="w-5 h-5" />
+                    <span className="text-sm font-medium">Logout</span>
+                </button>
+            )}
         </nav>
     );
 };
