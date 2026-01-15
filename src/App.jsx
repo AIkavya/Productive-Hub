@@ -1315,22 +1315,9 @@ const HabitTracker = ({ habits, setHabits }) => {
     const [newHabit, setNewHabit] = useState({ name: '', color: 'purple' });
     const today = new Date().toDateString();
 
-    const calculateStreak = (completedDates, currentDate) => {
-        let streak = 0;
-        let checkDate = new Date(currentDate);
-        checkDate.setHours(0, 0, 0, 0);
-        const dates = [...completedDates].sort().reverse();
-        for (const dateStr of dates) {
-            const date = new Date(dateStr);
-            date.setHours(0, 0, 0, 0);
-            if (date.getTime() === checkDate.getTime()) {
-                streak++;
-                checkDate.setDate(checkDate.getDate() - 1);
-            } else if (date.getTime() < checkDate.getTime()) {
-                break;
-            }
-        }
-        return streak;
+    const calculateStreak = (completedDates) => {
+        // Streak is the total number of completed dates (ticked cards)
+        return completedDates.length;
     };
 
     const toggleHabit = (habitId, date) => {
@@ -1346,7 +1333,7 @@ const HabitTracker = ({ habits, setHabits }) => {
                 return {
                     ...habit,
                     completedDates: newDates,
-                    currentStreak: calculateStreak(newDates, new Date())
+                    currentStreak: calculateStreak(newDates)
                 };
             }
             return habit;
