@@ -21,34 +21,34 @@
   --ring: rgba(96, 165, 250, 0.7);
 }
 
-/* Gotham (default) */
+/* Gotham (default) - Deep Dark Theme */
 html[data-theme="gotham"] {
-  --bg: #020617;
-  --bg2: #020617;
-  --surface: rgba(15, 23, 42, 0.72);
-  --surface2: rgba(15, 23, 42, 0.9);
-  --border: rgba(129, 140, 248, 0.55);
-  --text: #e5e7eb;
-  --muted: #a5b4fc;
-  --muted2: #9ca3af;
-  --primary: #6366f1;
-  --primary2: #f97316;
-  --ring: rgba(96, 165, 250, 0.7);
+  --bg: #0d0d0d;
+  --bg2: #060606;
+  --surface: rgba(18, 18, 22, 0.95);
+  --surface2: rgba(24, 24, 30, 0.98);
+  --border: rgba(60, 60, 70, 0.5);
+  --text: #c0c0c0;
+  --muted: #808080;
+  --muted2: #606060;
+  --primary: #5a5a5a;
+  --primary2: #6a6a6a;
+  --ring: rgba(90, 90, 100, 0.6);
 }
 
-/* Solar (warm) */
+/* Solar (warm) - Deep Dark Charcoal */
 html[data-theme="solar"] {
-  --bg: #05040a;
-  --bg2: #020617;
-  --surface: rgba(15, 23, 42, 0.8);
-  --surface2: rgba(30, 64, 175, 0.9);
-  --border: rgba(251, 191, 36, 0.6);
-  --text: #fef3c7;
-  --muted: #fed7aa;
-  --muted2: #e5e7eb;
-  --primary: #f59e0b; /* amber-500 */
-  --primary2: #ef4444; /* red-500 */
-  --ring: rgba(245, 158, 11, 0.7);
+  --bg: #0a0a0a;
+  --bg2: #050505;
+  --surface: rgba(16, 16, 18, 0.97);
+  --surface2: rgba(22, 22, 26, 0.99);
+  --border: rgba(50, 50, 55, 0.5);
+  --text: #b5b5b5;
+  --muted: #757575;
+  --muted2: #555555;
+  --primary: #545454;
+  --primary2: #646464;
+  --ring: rgba(84, 84, 92, 0.6);
 }
 
 /* Ocean (cool) */
@@ -182,9 +182,9 @@ html[data-theme="rose"] {
       filter 150ms ease-out;
   }
   .t-btn-primary:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
-    box-shadow: 0 24px 45px rgba(15, 23, 42, 1);
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+    box-shadow: 0 24px 45px rgba(90, 90, 100, 0.3);
   }
 
   .t-btn-primary::before {
@@ -223,14 +223,13 @@ html[data-theme="rose"] {
   }
 
   .t-btn-ghost:hover {
-    background-color: color-mix(in srgb, var(--surface2) 80%, transparent);
-    color: var(--text);
-    transform: translateX(4px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    background-color: transparent;
+    color: #ffffff;
+    transform: translateX(2px);
   }
 
   .t-btn-ghost:hover::before {
-    opacity: 0.08;
+    opacity: 0;
   }
 
   .t-btn-ghost svg {
@@ -238,8 +237,8 @@ html[data-theme="rose"] {
   }
 
   .t-btn-ghost:hover svg {
-    transform: scale(1.1) rotate(5deg);
-    color: var(--primary);
+    transform: scale(1.05);
+    color: var(--muted);
   }
 
   /* Goal/Mission Card Hover Effects */
@@ -262,8 +261,9 @@ html[data-theme="rose"] {
 
   .goal-card:hover {
     transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    background-color: rgba(24, 24, 30, 0.8);
+    box-shadow: 0 12px 40px rgba(90, 90, 100, 0.2);
+    border-color: rgba(80, 80, 90, 0.5);
   }
 
   .goal-card:hover::before {
@@ -283,7 +283,7 @@ html[data-theme="rose"] {
 
   .goal-action-btn:hover {
     transform: scale(1.1);
-    background-color: color-mix(in srgb, var(--surface2) 60%, transparent);
+    background-color: rgba(90, 90, 100, 0.2);
   }
 
   .goal-action-btn:active {
@@ -341,9 +341,15 @@ html[data-theme="rose"] {
     transition: all 200ms ease-out;
   }
 
+  .t-input:hover {
+    background-color: rgba(24, 24, 30, 0.8);
+    border-color: rgba(60, 60, 70, 0.8);
+  }
+
   .t-input:focus {
-    border-color: var(--ring);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 25%, transparent);
+    border-color: var(--primary);
+    background-color: rgba(24, 24, 30, 1);
+    box-shadow: 0 0 0 3px rgba(90, 90, 100, 0.15);
     outline: none;
   }
 
@@ -433,18 +439,7 @@ html[data-theme="rose"] {
   }
 
   .card-glow::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    background: linear-gradient(135deg, var(--primary), var(--primary2));
-    border-radius: inherit;
-    opacity: 0;
-    transition: opacity 300ms ease-out;
-    z-index: -1;
-  }
-
-  .card-glow:hover::before {
-    opacity: 0.3;
+    display: none;
   }
 
   .t-btn-primary:hover::before {
@@ -524,8 +519,9 @@ html[data-theme="rose"] {
   .nav-floating {
     backdrop-filter: blur(26px) saturate(180%);
     border-radius: 999px;
-    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.95);
-    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    box-shadow: 0 20px 45px rgba(90, 90, 100, 0.1);
+    border: 1px solid rgba(60, 60, 70, 0.4);
+    background: rgba(18, 18, 22, 0.8);
   }
 
   .card-glow {

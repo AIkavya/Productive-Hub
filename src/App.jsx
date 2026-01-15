@@ -109,7 +109,7 @@ export default function App() {
     const [missionSearch, setMissionSearch] = useState('');
     const [plannerSearch, setPlannerSearch] = useState('');
     const [newGoal, setNewGoal] = useState({ text: '', deadline: '', tag: '', priority: 'medium' });
-    const [newScheduleItem, setNewScheduleItem] = useState({ duration: '', text: '' });
+    const [newScheduleItem, setNewScheduleItem] = useState({ hours: '', minutes: '', seconds: '', text: '' });
     
     // --- UI State ---
     const [isDataLoading, setIsDataLoading] = useState(true);
@@ -229,16 +229,25 @@ export default function App() {
 
     const handleAddScheduleItem = (e) => {
         e.preventDefault();
-        if (newScheduleItem.text.trim() && newScheduleItem.duration > 0) {
+        if (newScheduleItem.text.trim()) {
+            const hours = parseInt(newScheduleItem.hours) || 0;
+            const minutes = parseInt(newScheduleItem.minutes) || 0;
+            const seconds = parseInt(newScheduleItem.seconds) || 0;
+            const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+            
             const newItem = { 
-                ...newScheduleItem, 
+                text: newScheduleItem.text,
                 id: Date.now(), 
                 completed: false,
                 isActive: false,
-                secondsLeft: newScheduleItem.duration * 60
+                hours,
+                minutes,
+                seconds,
+                secondsLeft: totalSeconds,
+                hasDuration: totalSeconds > 0
             };
-            setSchedule([...schedule, newItem].sort((a,b) => a.duration - b.duration));
-            setNewScheduleItem({ duration: '', text: '' });
+            setSchedule([...schedule, newItem].sort((a,b) => (b.hasDuration ? 1 : 0) - (a.hasDuration ? 1 : 0)));
+            setNewScheduleItem({ hours: '', minutes: '', seconds: '', text: '' });
         }
     };
 
@@ -246,6 +255,13 @@ export default function App() {
         setSchedule(schedule.map(item => {
             if (item.id === id) return { ...item, isActive: !item.isActive };
             return { ...item, isActive: false };
+        }));
+    };
+
+    const toggleTaskCompletion = (id) => {
+        setSchedule(schedule.map(item => {
+            if (item.id === id) return { ...item, completed: !item.completed };
+            return item;
         }));
     };
 
@@ -416,6 +432,7 @@ export default function App() {
                                                     newScheduleItem={newScheduleItem}
                                                     setNewScheduleItem={setNewScheduleItem}
                                                     toggleTimer={toggleTimer}
+                                                    toggleTaskCompletion={toggleTaskCompletion}
                                                     deleteScheduleItem={deleteScheduleItem}
                                                     clearCompletedSchedule={clearCompletedSchedule}
                                                     plannerSearch={plannerSearch}
@@ -431,7 +448,7 @@ export default function App() {
                                 {currentView === 'calendar' && <CalendarView goals={goals} events={events} setEvents={setEvents} />}
                                 {currentView === 'logbook' && <Logbook goals={goals} updateGoal={updateGoal} deleteGoal={deleteGoal} />}
                                 {currentView === 'dashboard' && <ProductivityDashboard goals={goals} habits={habits} schedule={schedule} />}
-                                {currentView === 'analytics' && <Analytics completedGoals={completedGoals} />}
+                                {currentView === 'analytics' && <Analytics completedGoals={completedGoals} schedule={schedule} habits={habits} />}
                             </section>
                             </div>
                         </div>
@@ -499,6 +516,7 @@ export default function App() {
                                                 newScheduleItem={newScheduleItem}
                                                 setNewScheduleItem={setNewScheduleItem}
                                                 toggleTimer={toggleTimer}
+                                                toggleTaskCompletion={toggleTaskCompletion}
                                                 deleteScheduleItem={deleteScheduleItem}
                                                 clearCompletedSchedule={clearCompletedSchedule}
                                                 plannerSearch={plannerSearch}
@@ -514,7 +532,7 @@ export default function App() {
                             {currentView === 'calendar' && <CalendarView goals={goals} events={events} setEvents={setEvents} />}
                             {currentView === 'logbook' && <Logbook goals={goals} updateGoal={updateGoal} deleteGoal={deleteGoal} />}
                             {currentView === 'dashboard' && <ProductivityDashboard goals={goals} habits={habits} schedule={schedule} />}
-                            {currentView === 'analytics' && <Analytics completedGoals={completedGoals} />}
+                            {currentView === 'analytics' && <Analytics completedGoals={completedGoals} schedule={schedule} habits={habits} />}
                         </section>
                     </div>
 
@@ -643,7 +661,7 @@ const ThemeSwitcher = ({ theme, setTheme }) => {
 };
 
 // --- Daily Planner Component (Now a Timer List) ---
-const DailyPlanner = ({ schedule, handleAddScheduleItem, newScheduleItem, setNewScheduleItem, toggleTimer, deleteScheduleItem, clearCompletedSchedule, plannerSearch, setPlannerSearch }) => (
+const DailyPlanner = ({ schedule, handleAddScheduleItem, newScheduleItem, setNewScheduleItem, toggleTimer, toggleTaskCompletion, deleteScheduleItem, clearCompletedSchedule, plannerSearch, setPlannerSearch }) => (
     <div className="space-y-6">
         <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -658,28 +676,53 @@ const DailyPlanner = ({ schedule, handleAddScheduleItem, newScheduleItem, setNew
             </div>
             <form
                 onSubmit={handleAddScheduleItem}
-                className="flex flex-col sm:flex-row gap-2"
+                className="flex flex-col gap-3"
             >
-                <input 
-                    type="number" 
-                    value={newScheduleItem.duration} 
-                    onChange={(e) => setNewScheduleItem({...newScheduleItem, duration: e.target.value ? parseInt(e.target.value) : ''})} 
-                    placeholder="Duration (min)" 
-                    className="rounded-lg px-2 py-2 w-full sm:w-32 t-input t-ring"
-                />
-                <input 
-                    type="text" 
-                    value={newScheduleItem.text} 
-                    onChange={(e) => setNewScheduleItem({...newScheduleItem, text: e.target.value})} 
-                    placeholder="Schedule a task..." 
-                    className="flex-grow rounded-lg px-4 py-2 t-input t-ring"
-                />
-                <button
-                    type="submit"
-                    className="t-btn-primary rounded-lg px-4 py-2 font-semibold sm:self-auto self-stretch"
-                >
-                    <Icon path="M12 4.5v15m7.5-7.5h-15" />
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <input 
+                        type="number" 
+                        value={newScheduleItem.hours} 
+                        onChange={(e) => setNewScheduleItem({...newScheduleItem, hours: e.target.value})} 
+                        placeholder="Hours" 
+                        min="0"
+                        max="23"
+                        className="rounded-lg px-2 py-2 w-full sm:w-20 t-input t-ring text-sm"
+                    />
+                    <input 
+                        type="number" 
+                        value={newScheduleItem.minutes} 
+                        onChange={(e) => setNewScheduleItem({...newScheduleItem, minutes: e.target.value})} 
+                        placeholder="Minutes" 
+                        min="0"
+                        max="59"
+                        className="rounded-lg px-2 py-2 w-full sm:w-20 t-input t-ring text-sm"
+                    />
+                    <input 
+                        type="number" 
+                        value={newScheduleItem.seconds} 
+                        onChange={(e) => setNewScheduleItem({...newScheduleItem, seconds: e.target.value})} 
+                        placeholder="Seconds" 
+                        min="0"
+                        max="59"
+                        className="rounded-lg px-2 py-2 w-full sm:w-20 t-input t-ring text-sm"
+                    />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <input 
+                        type="text" 
+                        value={newScheduleItem.text} 
+                        onChange={(e) => setNewScheduleItem({...newScheduleItem, text: e.target.value})} 
+                        placeholder="Schedule a task..." 
+                        className="flex-grow rounded-lg px-4 py-2 t-input t-ring"
+                    />
+                    <button
+                        type="submit"
+                        className="t-btn-primary rounded-lg px-4 py-2 font-semibold sm:self-auto self-stretch"
+                    >
+                        <Icon path="M12 4.5v15m7.5-7.5h-15" />
+                    </button>
+                </div>
+                <p className="text-xs t-muted-2 px-2">Duration is optional - just enter task name and click add to schedule without a timer</p>
             </form>
         </div>
         <div className="space-y-2 max-h-[60vh] sm:max-h-[500px] overflow-y-auto pr-2">
@@ -688,17 +731,30 @@ const DailyPlanner = ({ schedule, handleAddScheduleItem, newScheduleItem, setNew
                 : schedule
                     .filter(item => (plannerSearch || '').trim() ? (item.text || '').toLowerCase().includes(plannerSearch.trim().toLowerCase()) : true)
                     .map(item => {
-                const minutes = Math.floor(item.secondsLeft / 60);
+                const hours = Math.floor(item.secondsLeft / 3600);
+                const minutes = Math.floor((item.secondsLeft % 3600) / 60);
                 const seconds = item.secondsLeft % 60;
-                const progress = item.duration > 0 ? ((item.duration * 60 - item.secondsLeft) / (item.duration * 60)) * 100 : 0;
+                const totalDuration = (item.hours * 3600) + (item.minutes * 60) + item.seconds;
+                const progress = totalDuration > 0 ? ((totalDuration - item.secondsLeft) / totalDuration) * 100 : 0;
                 
                 return (
                     <div key={item.id} className={`relative group p-3 rounded-lg transition-colors overflow-hidden ${item.completed ? 'bg-green-500/20' : 'bg-gray-800/60 hover:bg-gray-800'}`}>
-                        <div className="absolute top-0 left-0 h-full bg-teal-500/20 transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                        <div className="relative flex items-center gap-4">
-                            <span className="font-mono text-teal-300 w-20">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>
+                        {item.hasDuration && <div className="absolute top-0 left-0 h-full bg-teal-500/20 transition-all duration-500" style={{ width: `${progress}%` }}></div>}
+                        <div className="relative flex items-center gap-3">
+                            <input 
+                                type="checkbox" 
+                                checked={item.completed} 
+                                onChange={() => toggleTaskCompletion(item.id)}
+                                className="w-5 h-5 rounded cursor-pointer"
+                                style={{ accentColor: '#4ade80' }}
+                            />
+                            {item.hasDuration ? (
+                                <span className="font-mono text-teal-300 w-20">{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>
+                            ) : (
+                                <span className="font-mono text-gray-400 w-20">No timer</span>
+                            )}
                             <span className={`flex-grow ${item.completed ? 'line-through text-gray-500' : ''}`}>{item.text}</span>
-                            {!item.completed && (
+                            {!item.completed && item.hasDuration && (
                                 <button onClick={() => toggleTimer(item.id)} className="text-white p-1 rounded-full t-btn-primary z-10">
                                     <Icon path={item.isActive ? "M15.75 5.25v13.5m-7.5-13.5v13.5" : "M5.25 5.653c0-1.426 1.529-2.33 2.779-1.643l7.5 4.347c1.25.722 1.25 2.565 0 3.286l-7.5 4.347c-1.25.722-2.779-.217-2.779-1.643V5.653z"} className="w-5 h-5" />
                                 </button>
@@ -1018,18 +1074,15 @@ const CalendarView = ({ goals, events, setEvents }) => {
 };
 
 // --- Analytics View ---
-const Analytics = ({ completedGoals }) => {
+const Analytics = ({ completedGoals, schedule, habits }) => {
     const [timeframe, setTimeframe] = useState('monthly');
     
     const filterGoals = (goals, frame) => {
         const now = new Date();
         return goals.filter(g => {
-            // Skip goals without lastCompleted date
             if (!g.lastCompleted) return false;
-            
             const completedDate = new Date(g.lastCompleted);
-            if (isNaN(completedDate.getTime())) return false; // Invalid date
-            
+            if (isNaN(completedDate.getTime())) return false;
             if (frame === 'weekly') {
                 const oneWeekAgo = new Date(now);
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -1046,11 +1099,35 @@ const Analytics = ({ completedGoals }) => {
             return true;
         });
     };
+
+    const filterByTimeframe = (items, dateField, frame) => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        return items.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            itemDate.setHours(0, 0, 0, 0);
+            if (frame === 'weekly') {
+                const oneWeekAgo = new Date(now);
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                return itemDate >= oneWeekAgo;
+            }
+            if (frame === 'monthly') {
+                return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+            }
+            if (frame === 'yearly') {
+                return itemDate.getFullYear() === now.getFullYear();
+            }
+            return true;
+        });
+    };
     
     const filteredGoals = filterGoals(completedGoals, timeframe);
-    const totalCompleted = filteredGoals.length;
-    // Calculate progress percentage based on timeframe (show percentage of all completed goals in this timeframe)
-    const progressPercentage = completedGoals.length > 0 ? (totalCompleted / completedGoals.length) * 100 : 0;
+    const completedTasks = schedule.filter(s => s.completed).length;
+    const totalTasks = schedule.length;
+    const habitsCompletedDates = habits.reduce((total, habit) => total + (habit.completedDates?.length || 0), 0);
+    
+    const totalCompleted = filteredGoals.length + completedTasks;
+    const progressPercentage = totalCompleted > 0 ? (filteredGoals.length / (filteredGoals.length + completedTasks)) * 100 : 0;
     
     return (
         <div className="space-y-8">
@@ -1062,8 +1139,22 @@ const Analytics = ({ completedGoals }) => {
                     </button>
                 ))}
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50 text-center">
+                    <p className="text-3xl font-bold text-purple-300">{filteredGoals.length}</p>
+                    <p className="text-sm text-gray-400 mt-1">Goals Completed</p>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50 text-center">
+                    <p className="text-3xl font-bold text-teal-300">{completedTasks}/{totalTasks}</p>
+                    <p className="text-sm text-gray-400 mt-1">Tasks Completed</p>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50 text-center">
+                    <p className="text-3xl font-bold text-green-300">{habitsCompletedDates}</p>
+                    <p className="text-sm text-gray-400 mt-1">Habit Check-ins</p>
+                </div>
+            </div>
             <div className="text-center">
-                 <p className="text-lg text-gray-300">Missions Accomplished ({timeframe})</p>
+                 <p className="text-lg text-gray-300">Total Accomplishments ({timeframe})</p>
                  <p className="text-5xl font-bold t-gradient-text">{totalCompleted}</p>
                  <div className="relative w-32 h-32 mx-auto mt-4">
                     <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -1071,6 +1162,31 @@ const Analytics = ({ completedGoals }) => {
                         <path className="text-green-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={`${progressPercentage}, 100`} />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center text-2xl">✨</div>
+                </div>
+            </div>
+            <div className="p-4 bg-gray-800/60 rounded-lg">
+                <h3 className="text-xl font-bold t-muted mb-4">Accomplishments Breakdown</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead><tr style={{ borderBottom: '1px solid var(--border)' }}><th className="p-2">Type</th><th className="p-2">Count</th><th className="p-2">Percentage</th></tr></thead>
+                        <tbody>
+                            <tr style={{ borderBottom: '1px solid rgba(60, 60, 70, 0.3)' }}>
+                                <td className="p-2">🎯 Missions</td>
+                                <td className="p-2">{filteredGoals.length}</td>
+                                <td className="p-2">{totalCompleted > 0 ? Math.round((filteredGoals.length / totalCompleted) * 100) : 0}%</td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid rgba(60, 60, 70, 0.3)' }}>
+                                <td className="p-2">✓ Daily Tasks</td>
+                                <td className="p-2">{completedTasks}</td>
+                                <td className="p-2">{totalCompleted > 0 ? Math.round((completedTasks / totalCompleted) * 100) : 0}%</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2">🔥 Habit Check-ins</td>
+                                <td className="p-2">{habitsCompletedDates}</td>
+                                <td className="p-2">{totalCompleted > 0 ? Math.round((habitsCompletedDates / (totalCompleted + habitsCompletedDates)) * 100) : 0}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <div className="p-4 bg-gray-800/60 rounded-lg">
@@ -1461,7 +1577,13 @@ const ProductivityDashboard = ({ goals, habits, schedule }) => {
     const completedGoals = goals.filter(g => { const total = g.subgoals.length; const completed = g.subgoals.filter(sg => sg.completed).length; return total > 0 && completed === total; });
     const today = new Date().toDateString();
     const completedHabitsToday = habits.filter(h => (h.completedDates || []).includes(today)).length;
-    const totalTimeToday = schedule.filter(item => item.completed).reduce((sum, item) => sum + (item.duration || 0), 0);
+    const completedTasksToday = schedule.filter(item => item.completed).length;
+    const totalTasksToday = schedule.length;
+    const totalTimeToday = schedule.filter(item => item.completed).reduce((sum, item) => {
+        const duration = (item.hours * 3600) + (item.minutes * 60) + item.seconds;
+        return sum + duration;
+    }, 0);
+    const totalMinutesToday = Math.round(totalTimeToday / 60);
     const urgentGoals = activeGoals.filter(g => g.priority === 'urgent');
     const highPriorityGoals = activeGoals.filter(g => g.priority === 'high');
 
@@ -1469,13 +1591,13 @@ const ProductivityDashboard = ({ goals, habits, schedule }) => {
         let score = 0;
         const totalGoals = goals.length;
         const completedGoals = goals.filter(g => { const total = g.subgoals.length; const completed = g.subgoals.filter(sg => sg.completed).length; return total > 0 && completed === total; }).length;
-        score += totalGoals > 0 ? (completedGoals / totalGoals) * 40 : 0;
+        score += totalGoals > 0 ? (completedGoals / totalGoals) * 30 : 0;
         const totalHabits = habits.length;
         const todayCompletedHabits = habits.filter(h => (h.completedDates || []).includes(new Date().toDateString())).length;
         score += totalHabits > 0 ? (todayCompletedHabits / totalHabits) * 30 : 0;
         const completedSchedule = schedule.filter(s => s.completed).length;
         const totalSchedule = schedule.length;
-        score += totalSchedule > 0 ? (completedSchedule / totalSchedule) * 30 : 0;
+        score += totalSchedule > 0 ? (completedSchedule / totalSchedule) * 40 : 0;
         return Math.round(score);
     }
 
@@ -1498,16 +1620,38 @@ const ProductivityDashboard = ({ goals, habits, schedule }) => {
                     <p className="text-sm text-gray-400 mt-1">Active Goals</p>
                 </div>
                 <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50 text-center">
-                    <p className="text-3xl font-bold text-green-300">{completedHabitsToday}</p>
+                    <p className="text-3xl font-bold text-green-300">{completedHabitsToday}/{habits.length}</p>
                     <p className="text-sm text-gray-400 mt-1">Habits Today</p>
                 </div>
                 <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50 text-center">
-                    <p className="text-3xl font-bold text-blue-300">{totalTimeToday}</p>
-                    <p className="text-sm text-gray-400 mt-1">Minutes Focused</p>
+                    <p className="text-3xl font-bold text-blue-300">{completedTasksToday}/{totalTasksToday}</p>
+                    <p className="text-sm text-gray-400 mt-1">Tasks Completed</p>
                 </div>
                 <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50 text-center">
-                    <p className="text-3xl font-bold text-yellow-300">{completedGoals.length}</p>
-                    <p className="text-sm text-gray-400 mt-1">Completed Goals</p>
+                    <p className="text-3xl font-bold text-yellow-300">{totalMinutesToday}m</p>
+                    <p className="text-sm text-gray-400 mt-1">Time Focused</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50">
+                    <h3 className="text-lg font-bold text-teal-300 mb-3">Daily Planner Status</h3>
+                    <div className="space-y-2">
+                        {schedule.slice(0, 5).map(task => (
+                            <div key={task.id} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className={task.completed ? '✓' : '○'} style={{color: task.completed ? '#4ade80' : '#888'}}></span>
+                                    <span className={task.completed ? 'line-through text-gray-500' : 'text-gray-300'}>{task.text}</span>
+                                </div>
+                                <span className="text-xs text-gray-500">{task.hasDuration ? '⏱' : '📌'}</span>
+                            </div>
+                        ))}
+                        {schedule.length > 5 && <p className="text-xs text-gray-500 mt-2">+{schedule.length - 5} more tasks</p>}
+                    </div>
+                </div>
+                <div className="bg-gray-800/60 rounded-lg p-4 border border-purple-800/50">
+                    <h3 className="text-lg font-bold text-cyan-300 mb-3">Completed Goals</h3>
+                    <p className="text-3xl font-bold text-green-400 mb-2">{completedGoals.length}</p>
+                    <p className="text-sm text-gray-400">Total missions accomplished</p>
                 </div>
             </div>
             {(urgentGoals.length > 0 || highPriorityGoals.length > 0) && (
